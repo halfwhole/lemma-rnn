@@ -1,3 +1,6 @@
 [submodule "E_conj"]
 	path = E_conj
-	url = git@github.com:JUrban/E_conj.git
+	url = https://github.com/JUrban/E_conj.git
+[submodule "Elemmaclassify"]
+	path = Elemmaclassify
+	url = https://github.com/thomastanck/Elemmaclassify.git
