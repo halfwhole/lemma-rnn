@@ -1,23 +1,12 @@
+import sys
 import os
 import functools
-import itertools
 import collections
 import zlib
-
-'''
-import torch
-import torch.nn as nn
-import torch.optim as optim
-
-import torch.utils.tensorboard as torchboard
-import HRRTorch
-
-torch.set_num_threads(1)
-'''
+import string
+import pickle
 
 import parse
-import utils
-import pickle
 
 def get_usefulness():
     print('getting usefulness')
@@ -64,6 +53,8 @@ def shuffle_by_hash(l, key=str):
 
 usefulness = None
 problemlemmas = None
+all_letters = None
+n_letters = None
 
 if (os.path.isfile('test1data/usefulness_raw.pickle')):
     usefulness = pickle.load(open('test1data/usefulness_raw.pickle', 'rb'))
@@ -77,189 +68,134 @@ else:
     problemlemmas = get_problemslemmas()
     pickle.dump(problemlemmas, open('test1data/problemslemmas_raw.pickle', 'wb'))
 
-'''
-def train_test_split(names, test_split, sortkey):
-    shuf = sorted(names, key=sortkey)
-    train_size = int(len(shuf) * (1-test_split))
-    return shuf[:train_size], shuf[train_size:]
+all_letters = string.printable
+n_letters = len(all_letters)
 
-def pos_neg_split(names):
-    pos, neg = [], []
-    for pname, lname, problem, lemma in names:
-        if usefulness[pname][lname] < 1:
-            pos.append((pname, lname, problem, lemma))
-        else:
-            neg.append((pname, lname, problem, lemma))
-    return pos, neg
+import random
+import torch
+import torch.nn as nn
 
-def MLP_classifier(feature_size, layer_sizes):
-    model = nn.Sequential()
-    numneurons = feature_size
-    for i, size in enumerate(layer_sizes):
-        model.add_module(str(i) + 'Linear', nn.Linear(numneurons, size))
-        model.add_module(str(i) + 'LeakyReLU', nn.LeakyReLU())
-        numneurons = size
-    model.add_module(str(len(layer_sizes)) + 'Linear', nn.Linear(numneurons, 1))
-    return model
+cuda = torch.device("cuda")
 
-class Cat_featurizer(nn.Module):
-    def forward(self, problemhrr, lemmahrr):
-        return torch.cat([problemhrr, lemmahrr])
+# Find letter index from all_letters, e.g. "a" = 0
+def letterToIndex(letter):
+    return all_letters.find(letter)
 
-class Decoder_featurizer(nn.Module):
-    def __init__(self, hrr_size, num_decoders):
-        super(Decoder_featurizer, self).__init__()
+# Just for demonstration, turn a letter into a <1 x n_letters> Tensor
+def letterToTensor(letter):
+    tensor = torch.zeros(1, n_letters)
+    tensor[0][letterToIndex(letter)] = 1
+    return tensor.to(cuda)
 
-        decoders = [ nn.Parameter(torch.Tensor(hrr_size)) for i in range(num_decoders) ]
-        self.decoders = nn.ParameterList(decoders)
+# Turn a line into a <line_length x 1 x n_letters>,
+# or an array of one-hot letter vectors
+def lineToTensor(line):
+    tensor = torch.zeros(len(line), 1, n_letters)
+    for li, letter in enumerate(line):
+        tensor[li][0][letterToIndex(letter)] = 1
+    return tensor.to(cuda)
 
-    def forward(self, problemhrr, lemmahrr):
-        return torch.cat([
-            problemhrr,
-            lemmahrr,
-            *(HRRTorch.associate(decoder, problemhrr) for decoder in self.decoders),
-            *(HRRTorch.associate(decoder, lemmahrr) for decoder in self.decoders),
-            ])
+class RNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(RNN, self).__init__()
 
-class HRRClassifier(nn.Module):
+        self.hidden_size = hidden_size
+        # Input to hidden function
+        self.i2h = nn.Linear(input_size + hidden_size, hidden_size)
+        # Input to output function
+        self.i2o = nn.Linear(input_size + hidden_size, output_size)
+        # self.softmax = nn.LogSoftmax(dim=1)
 
-    def __init__(self, hrrmodel, featurizer, classifier):
-        super(HRRClassifier, self).__init__()
+    # Called on each input
+    # Computes the outputs (and next hidden state)
+    def forward(self, input, hidden):
+        combined = torch.cat((input, hidden), 1)
+        hidden = self.i2h(combined)
+        output = self.i2o(combined)
+        # output = self.softmax(output)
+        return output, hidden
 
-        self.hrrmodel = hrrmodel
-        self.featurizer = featurizer
-        self.classifier = classifier
+    def initHidden(self):
+        # Could use torch.rand also
+        return torch.zeros(1, self.hidden_size).to(cuda)
 
-    def forward(self, problem, lemma):
-        problemhrr = self.hrrmodel(problem)
-        lemmahrr = self.hrrmodel(lemma)
-        features = self.featurizer(problemhrr, lemmahrr)
-        out = self.classifier(features)
-        return out
+output_size = 1
+n_hidden = 128
 
-    def cache_clear(self):
-        self.hrrmodel.cache_clear()
-'''
-'''
-train, test = train_test_split(get_problemslemmas(), 0.1, lambda x: x)
-train_pos, train_neg = pos_neg_split(train)
-train_pos = shuffle_by_hash(train_pos, key=lambda x: str(x[:2]))
-train_neg = shuffle_by_hash(train_neg, key=lambda x: str(x[:2]))
-num_examples = min(len(train_pos), len(train_neg))
-train_pos = train_pos[:num_examples]
-train_neg = train_neg[:num_examples]
+rnn = RNN(n_letters, n_hidden, output_size)
+rnn.to(cuda)
 
-# hrr_size = 16
-# model = HRRClassifier(
-#         HRRTorch.FlatTreeHRRTorch2(hrr_size),
-#         Cat_featurizer(),
-#         MLP_classifier(hrr_size * 2, [hrr_size*4] * 2))
-# loss_func = nn.BCEWithLogitsLoss()
-# opt = optim.Adam(model.parameters())
-# writer = torchboard.SummaryWriter(comment='FlatTreeHRRTorch2_3LP_BCEWithLogitsLoss_HRR16_eqclasses')
+def randomChoice(l):
+    return l[random.randint(0, len(l) - 1)]
 
-hrr_size = 16
-num_decoders = 16
-num_classifier_layers = 3
-model = HRRClassifier(
-        HRRTorch.FlatTreeHRRTorch2(hrr_size),
-        Decoder_featurizer(hrr_size, num_decoders),
-        MLP_classifier((num_decoders + 1) * hrr_size * 2, [hrr_size*4] * (num_classifier_layers-1)))
-loss_func = nn.BCEWithLogitsLoss()
-opt = optim.Adam(model.parameters())
-writer = torchboard.SummaryWriter(
-        comment='FlatTreeHRRTorch2_Decoder{}_{}LP_BCEWithLogitsLoss_HRR{}_eqclasses'.format(
-            num_decoders,
-            num_classifier_layers,
-            hrr_size,
-            ))
+def randomTrainingExample():
+    pl = randomChoice(problemlemmas)
+    pl_probname = pl[0]
+    pl_lemmaname = pl[1]
+    pl_probcatlemma = pl[2] + '@' + pl[3]
+    pl_usefulness = usefulness[pl_probname][pl_lemmaname]
 
-hrr_size = 16
-num_decoders = 16
-num_classifier_layers = 3
-model = HRRClassifier(
-        HRRTorch.FlatTreeHRRTorch2(hrr_size),
-        Decoder_featurizer(hrr_size, num_decoders),
-        MLP_classifier((num_decoders + 1) * hrr_size * 2, [hrr_size*4] * (num_classifier_layers-1)))
-loss_func = nn.BCEWithLogitsLoss()
-opt = optim.Adam(model.parameters())
-writer = torchboard.SummaryWriter(
-        comment='FlatTreeHRRTorch2_Decoder{}_{}LP_BCEWithLogitsLoss_HRR{}_eqclasses'.format(
-            num_decoders,
-            num_classifier_layers,
-            hrr_size,
-            ))
+    usefulness_tensor = torch.tensor([[pl_usefulness]], dtype=torch.float).to(cuda)
+    line_tensor = lineToTensor(pl_probcatlemma)
+    return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor
 
-def calc_stats(numtruepos, numtrueneg, numfalsepos, numfalseneg):
-    total = numtruepos + numtrueneg + numfalsepos + numfalseneg
-    classified_pos = numtruepos + numfalsepos
-    actual_pos = numtruepos + numfalseneg
-    acc = 0 if total == 0 else (numtruepos + numtrueneg) / total
-    precision = 0 if classified_pos == 0 else numtruepos / classified_pos
-    recall = 0 if actual_pos == 0 else numtruepos / actual_pos
-    fscore = 0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
-    return acc, precision, recall, fscore
+criterion = nn.MSELoss()
+learning_rate = 0.005
 
-epochs = 2
-bs = 8
-for epoch in range(epochs):
-    numtruepos = 0
-    numtrueneg = 0
-    numfalsepos = 0
-    numfalseneg = 0
-    for i, batchnum in enumerate(shuffle_by_hash(range((num_examples - 1) // bs + 1))):
-        start_i = batchnum * bs
-        end_i = start_i + bs
-        loss = torch.tensor([0.])
+def train(usefulness_tensor, line_tensor):
+    hidden = rnn.initHidden()
+    output = None
 
-        if i % 5 == 0:
-            acc, precision, recall, fscore = calc_stats(numtruepos, numtrueneg, numfalsepos, numfalseneg)
-            writer.add_scalar('Acc/train', acc, i)
-            writer.add_scalar('Precision/train', precision, i)
-            writer.add_scalar('Recall/train', recall, i)
-            writer.add_scalar('F-Score/train', fscore, i)
-            numtruepos = 0
-            numtrueneg = 0
-            numfalsepos = 0
-            numfalseneg = 0
+    rnn.zero_grad()
 
-            # Add weights
-            def twodfy(tensor):
-                if len(tensor.shape) == 1:
-                    return tensor.reshape((1, -1))
-                return tensor
-            for name, weight in model.classifier.named_parameters():
-                writer.add_image('classifier_{}'.format(name), twodfy(weight), dataformats='HW')
-            for name, weight in model.featurizer.named_parameters():
-                writer.add_image('featurizer_{}'.format(name), twodfy(weight), dataformats='HW')
-            for name, weight in model.hrrmodel.named_parameters():
-                writer.add_image('hrr_{}'.format(name), twodfy(weight), dataformats='HW')
+    for i in range(line_tensor.size()[0]):
+        output, hidden = rnn(line_tensor[i], hidden)
 
-        for problemname, lemmaname, problem, lemma in [
-                *train_pos[start_i:end_i],
-                *train_neg[start_i:end_i],
-                ]:
-            print(problemname, lemmaname)
+    loss = criterion(output, usefulness_tensor)
+    loss.backward()
 
-            pred = model(problem, lemma)
-            with torch.no_grad():
-                if pred > 0 and usefulness[problemname][lemmaname] < 1:
-                    numtruepos += 1
-                elif pred <= 0 and usefulness[problemname][lemmaname] < 1:
-                    numfalseneg += 1
-                elif pred > 0 and usefulness[problemname][lemmaname] >= 1:
-                    numfalsepos += 1
-                elif pred <= 0 and usefulness[problemname][lemmaname] >= 1:
-                    numtrueneg += 1
-                acc, precision, recall, fscore = calc_stats(numtruepos, numtrueneg, numfalsepos, numfalseneg)
-                print('{:0.3f}'.format(float(pred)), '{:0.3f}'.format(usefulness[problemname][lemmaname]), '|', numtruepos, numtrueneg, numfalsepos, numfalseneg, '|', '{:0.3f} {:0.3f} {:0.3f} {:0.3f}'.format(acc, precision, recall, fscore))
+    for p in rnn.parameters():
+        p.data.add_(-learning_rate, p.grad.data)
 
-            loss += loss_func(pred, torch.tensor([1. if usefulness[problemname][lemmaname] < 1 else 0.]))
-        loss.backward()
-        model.cache_clear()
+    return output, loss.item()
 
-        writer.add_scalar('Loss/train', loss, i)
+import time
+import math
 
-        opt.step()
-        opt.zero_grad()
-'''
+n_iters = 10000
+print_every = 10
+plot_every = 10
+
+# Keep track of losses for plotting
+current_loss = 0
+all_losses = []
+
+def timeSince(since):
+    now = time.time()
+    s = now - since
+    m = math.floor(s / 60)
+    s -= m * 60
+    return '%dm %ds' % (m, s)
+
+start = time.time()
+
+for iter in range(1, n_iters + 1):
+    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample()
+    output, loss = train(usefulness_tensor, line_tensor)
+    current_loss += loss
+
+    # Print iter number, loss, name and guess
+    if iter % print_every == 0:
+        print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters * 100, timeSince(start)))
+        print('Loss: %.4f \tTarget: %s \tOutput: %s' % (loss, usefulness_tensor.data[0][0], output.data[0][0]))
+
+    # Add current loss avg to list of losses
+    if iter % plot_every == 0:
+        all_losses.append(current_loss / plot_every)
+        current_loss = 0
+
+    # Sanity check that everything is still running
+    sys.stdout.write('#')
+    sys.stdout.flush()
+
+print(all_losses)
