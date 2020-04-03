@@ -1,17 +1,13 @@
 import random
+import string
+import sys
 import torch
 import torch.nn as nn
+from parse import *
 
 cuda = torch.device("cuda")
 
-import sys
-import string
-from parse import *
-
 usefulness, problemlemmas = get_usefulness_problemslemmas()
-
-all_letters = None
-n_letters = None
 all_letters = string.printable
 n_letters = len(all_letters)
 

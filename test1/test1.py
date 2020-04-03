@@ -1,21 +1,18 @@
-import sys
-import string
-from parse import *
-
-usefulness, problemlemmas = get_usefulness_problemslemmas()
-
-all_letters = None
-n_letters = None
-all_letters = string.printable
-n_letters = len(all_letters)
-
-# The following is really copying the char_rnn tutorial
-
+import math
 import random
+import string
+import sys
+import time
 import torch
 import torch.nn as nn
 
+from parse import *
+
 cuda = torch.device("cuda")
+
+usefulness, problemlemmas = get_usefulness_problemslemmas()
+all_letters = string.printable
+n_letters = len(all_letters)
 
 # Find letter index from all_letters, e.g. "a" = 0
 def letterToIndex(letter):
@@ -102,9 +99,6 @@ def train(usefulness_tensor, line_tensor):
         p.data.add_(-learning_rate, p.grad.data)
 
     return output, loss.item()
-
-import time
-import math
 
 n_iters = 10
 print_every = 10
