@@ -5,28 +5,13 @@ import torch.nn as nn
 cuda = torch.device("cuda")
 
 import sys
-import os
 import string
-import pickle
 from parse import *
 
-usefulness = None
-problemlemmas = None
+usefulness, problemlemmas = get_usefulness_problemslemmas()
+
 all_letters = None
 n_letters = None
-
-if (os.path.isfile('test1data/usefulness_raw.pickle')):
-    usefulness = pickle.load(open('test1data/usefulness_raw.pickle', 'rb'))
-else:
-    usefulness = get_usefulness()
-    pickle.dump(usefulness, open('test1data/usefulness_raw.pickle', 'wb'))
-
-if (os.path.isfile('test1data/problemslemmas_raw.pickle')):
-    problemlemmas = pickle.load(open('test1data/problemslemmas_raw.pickle', 'rb'))
-else:
-    problemlemmas = get_problemslemmas()
-    pickle.dump(problemlemmas, open('test1data/problemslemmas_raw.pickle', 'wb'))
-
 all_letters = string.printable
 n_letters = len(all_letters)
 

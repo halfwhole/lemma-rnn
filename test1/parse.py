@@ -1,6 +1,31 @@
 import collections
 import zlib
 import functools
+import os
+import pickle
+
+def get_usefulness_problemslemmas():
+    if (os.path.isfile('test1data/usefulness_raw.pickle')):
+        usefulness = pickle.load(open('test1data/usefulness_raw.pickle', 'rb'))
+    else:
+        usefulness = _get_usefulness()
+        pickle.dump(usefulness, open('test1data/usefulness_raw.pickle', 'wb'))
+
+    if (os.path.isfile('test1data/problemslemmas_raw.pickle')):
+        problemlemmas = pickle.load(open('test1data/problemslemmas_raw.pickle', 'rb'))
+    else:
+        problemlemmas = _get_problemslemmas()
+        pickle.dump(problemlemmas, open('test1data/problemslemmas_raw.pickle', 'wb'))
+
+    return usefulness, problemlemmas
+
+@functools.lru_cache(maxsize=1)
+def parse_problem(problemname):
+    return _parse_cnf_file('E_conj/problems/{}'.format(problemname))
+
+
+# all private methods from here on =================================================================
+
 
 def _parse_cnf_list(s):
     # Filter out comments
@@ -11,7 +36,7 @@ def _parse_cnf_file(filename):
     with open(filename, 'r') as f:
         return _parse_cnf_list(f.read())
 
-def get_usefulness():
+def _get_usefulness():
     print('getting usefulness')
     with open('E_conj/statistics', 'r') as f:
         s = f.read()
@@ -27,10 +52,6 @@ def get_usefulness():
 
     return usefulness
 
-@functools.lru_cache(maxsize=1)
-def parse_problem(problemname):
-    return _parse_cnf_file('E_conj/problems/{}'.format(problemname))
-
 def _process_problemslemmas(l):
     name, lemma = l.split(':')
     _, problemname, lemmaname = name.split('/')
@@ -41,7 +62,7 @@ def _process_problemslemmas(l):
         lemma,
         )
 
-def get_problemslemmas():
+def _get_problemslemmas():
     print('parsing problems and lemmas')
     import multiprocessing
 
