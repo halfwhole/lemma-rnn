@@ -5,7 +5,7 @@ import sys
 import time
 import torch
 import torch.nn as nn
-
+from util import *
 from parse import *
 
 cuda = torch.device("cuda")
@@ -13,24 +13,6 @@ cuda = torch.device("cuda")
 usefulness, problemlemmas = get_usefulness_problemslemmas()
 all_letters = string.printable
 n_letters = len(all_letters)
-
-# Find letter index from all_letters, e.g. "a" = 0
-def letterToIndex(letter):
-    return all_letters.find(letter)
-
-# Just for demonstration, turn a letter into a <1 x n_letters> Tensor
-def letterToTensor(letter):
-    tensor = torch.zeros(1, n_letters)
-    tensor[0][letterToIndex(letter)] = 1
-    return tensor.to(cuda)
-
-# Turn a line into a <line_length x 1 x n_letters>,
-# or an array of one-hot letter vectors
-def lineToTensor(line):
-    tensor = torch.zeros(len(line), 1, n_letters)
-    for li, letter in enumerate(line):
-        tensor[li][0][letterToIndex(letter)] = 1
-    return tensor.to(cuda)
 
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -76,7 +58,7 @@ def randomTrainingExample():
     pl_usefulness = usefulness[pl_probname][pl_lemmaname]
 
     usefulness_tensor = torch.tensor([[pl_usefulness]], dtype=torch.float).to(cuda)
-    line_tensor = lineToTensor(pl_probcatlemma)
+    line_tensor = lineToTensor(pl_probcatlemma, all_letters, cuda)
     return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor
 
 # The loss function is mean squared, this is different from the tutorial
