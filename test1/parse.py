@@ -2,14 +2,14 @@ import collections
 import zlib
 import functools
 
-def parse_cnf_list(s):
+def _parse_cnf_list(s):
     # Filter out comments
     s = '\n'.join(l for l in s.split('\n') if not l.startswith('#') and l)
     return s
 
-def parse_cnf_file(filename):
+def _parse_cnf_file(filename):
     with open(filename, 'r') as f:
-        return parse_cnf_list(f.read())
+        return _parse_cnf_list(f.read())
 
 def get_usefulness():
     print('getting usefulness')
@@ -29,7 +29,7 @@ def get_usefulness():
 
 @functools.lru_cache(maxsize=1)
 def parse_problem(problemname):
-    return parse_cnf_file('E_conj/problems/{}'.format(problemname))
+    return _parse_cnf_file('E_conj/problems/{}'.format(problemname))
 
 def _process_problemslemmas(l):
     name, lemma = l.split(':')
