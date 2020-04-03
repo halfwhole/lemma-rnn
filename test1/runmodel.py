@@ -6,12 +6,8 @@ cuda = torch.device("cuda")
 
 import sys
 import os
-import functools
-import collections
-import zlib
 import string
 import pickle
-
 from parse import *
 
 usefulness = None
