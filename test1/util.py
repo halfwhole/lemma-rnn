@@ -1,3 +1,4 @@
+import random
 import torch
 
 # Find letter index from all_letters, e.g. "a" = 0
@@ -12,3 +13,18 @@ def lineToTensor(line, all_letters, cuda):
     for li, letter in enumerate(line):
         tensor[li][0][_letterToIndex(letter, all_letters)] = 1
     return tensor.to(cuda)
+
+def _randomChoice(l):
+    return l[random.randint(0, len(l) - 1)]
+
+def randomTrainingExample(problemlemmas, usefulness, all_letters, cuda):
+    pl = _randomChoice(problemlemmas)
+    pl_probname = pl[0]
+    pl_lemmaname = pl[1]
+    # Concatenate the problem with lemma, seperated by unused '@'
+    pl_probcatlemma = pl[2] + '@' + pl[3]
+    pl_usefulness = usefulness[pl_probname][pl_lemmaname]
+
+    usefulness_tensor = torch.tensor([[pl_usefulness]], dtype=torch.float).to(cuda)
+    line_tensor = lineToTensor(pl_probcatlemma, all_letters, cuda)
+    return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor

@@ -1,4 +1,3 @@
-import random
 import string
 import sys
 import torch
@@ -22,21 +21,6 @@ state_dict = torch.load('./test1models/training.pt')
 model.load_state_dict(state_dict)
 model.to(cuda)
 
-def randomChoice(l):
-    return l[random.randint(0, len(l) - 1)]
-
-def randomTrainingExample():
-    pl = randomChoice(problemlemmas)
-    pl_probname = pl[0]
-    pl_lemmaname = pl[1]
-    # Concatenate the problem with lemma, seperated by unused '@'
-    pl_probcatlemma = pl[2] + '@' + pl[3]
-    pl_usefulness = usefulness[pl_probname][pl_lemmaname]
-
-    usefulness_tensor = torch.tensor([[pl_usefulness]], dtype=torch.float).to(cuda)
-    line_tensor = lineToTensor(pl_probcatlemma, all_letters, cuda)
-    return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor
-
 criterion = nn.MSELoss()
 def eval_model(usefulness_tensor, line_tensor):
     hidden = model.initHidden()
@@ -55,7 +39,9 @@ output = None
 while (1):
     print("Enter to test random data instance")
     input()
-    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample()
+    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample(
+        problemlemmas, usefulness, all_letters, cuda
+    )
     output, loss = eval_model(usefulness_tensor, line_tensor)
     print('Problem: %s \tLemma: %s' % (pl_probname, pl_lemmaname))
     print('Loss: %.4f \tTarget: %s \tOutput: %s' % (loss, usefulness_tensor.data[0][0], output.data[0][0]))

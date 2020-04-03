@@ -1,5 +1,4 @@
 import math
-import random
 import string
 import sys
 import time
@@ -22,21 +21,6 @@ n_hidden = 128
 
 rnn = RNN(n_letters, n_hidden, output_size)
 rnn.to(cuda)
-
-def randomChoice(l):
-    return l[random.randint(0, len(l) - 1)]
-
-def randomTrainingExample():
-    pl = randomChoice(problemlemmas)
-    pl_probname = pl[0]
-    pl_lemmaname = pl[1]
-    # Concatenate the problem with lemma, seperated by unused '@'
-    pl_probcatlemma = pl[2] + '@' + pl[3]
-    pl_usefulness = usefulness[pl_probname][pl_lemmaname]
-
-    usefulness_tensor = torch.tensor([[pl_usefulness]], dtype=torch.float).to(cuda)
-    line_tensor = lineToTensor(pl_probcatlemma, all_letters, cuda)
-    return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor
 
 # The loss function is mean squared, this is different from the tutorial
 criterion = nn.MSELoss()
@@ -77,7 +61,9 @@ def timeSince(since):
 start = time.time()
 
 for iter in range(1, n_iters + 1):
-    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample()
+    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample(
+        problemlemmas, usefulness, all_letters, cuda
+    )
     output, loss = train(usefulness_tensor, line_tensor)
     current_loss += loss
 
