@@ -48,8 +48,3 @@ def get_problemslemmas():
     with multiprocessing.Pool() as pool:
         with open('E_conj/lemmas') as f:
             return pool.map(_process_problemslemmas, f, 32)
-
-def shuffle_by_hash(l, key=str):
-    return sorted(l,
-            key=lambda x:
-                zlib.crc32(key(x).encode('utf-8')) & 0xffffffff)
