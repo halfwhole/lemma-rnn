@@ -2,11 +2,11 @@ import string
 import sys
 import torch
 import torch.nn as nn
+
 from parse import *
 from rnn import RNN
 from util import *
-
-cuda = torch.device("cuda")
+from cuda_check import device
 
 usefulness, problemlemmas = get_usefulness_problemslemmas()
 all_letters = string.printable
@@ -19,7 +19,7 @@ n_hidden = 128
 model = RNN(n_letters, n_hidden, output_size)
 state_dict = torch.load('./test1models/training.pt')
 model.load_state_dict(state_dict)
-model.to(cuda)
+model.to(device)
 
 criterion = nn.MSELoss()
 def eval_model(usefulness_tensor, line_tensor):
@@ -40,7 +40,7 @@ while (1):
     print("Enter to test random data instance")
     input()
     pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample(
-        problemlemmas, usefulness, all_letters, cuda
+        problemlemmas, usefulness, all_letters, device
     )
     output, loss = eval_model(usefulness_tensor, line_tensor)
     print('Problem: %s \tLemma: %s' % (pl_probname, pl_lemmaname))

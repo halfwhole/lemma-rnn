@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from cuda_check import device  
+
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(RNN, self).__init__()
@@ -24,4 +26,4 @@ class RNN(nn.Module):
 
     def initHidden(self):
         # Could use torch.rand also
-        return torch.zeros(1, self.hidden_size).to(torch.device("cuda"))
+        return torch.zeros(1, self.hidden_size).to(device)

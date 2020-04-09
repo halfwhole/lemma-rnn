@@ -8,8 +8,7 @@ import torch.nn as nn
 from parse import *
 from rnn import RNN
 from util import *
-
-cuda = torch.device("cuda")
+from cuda_check import device
 
 usefulness, problemlemmas = get_usefulness_problemslemmas()
 all_letters = string.printable
@@ -20,7 +19,7 @@ output_size = 1
 n_hidden = 128
 
 rnn = RNN(n_letters, n_hidden, output_size)
-rnn.to(cuda)
+rnn.to(device)
 
 # The loss function is mean squared, this is different from the tutorial
 criterion = nn.MSELoss()
@@ -62,7 +61,7 @@ start = time.time()
 
 for iter in range(1, n_iters + 1):
     pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample(
-        problemlemmas, usefulness, all_letters, cuda
+        problemlemmas, usefulness, all_letters, device
     )
     output, loss = train(usefulness_tensor, line_tensor)
     current_loss += loss
