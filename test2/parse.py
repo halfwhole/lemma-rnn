@@ -5,17 +5,17 @@ import os
 import pickle
 
 def get_usefulness_problemslemmas():
-    if (os.path.isfile('test1data/usefulness_raw.pickle')):
-        usefulness = pickle.load(open('test1data/usefulness_raw.pickle', 'rb'))
+    if (os.path.isfile('test2data/usefulness_raw.pickle')):
+        usefulness = pickle.load(open('test2data/usefulness_raw.pickle', 'rb'))
     else:
         usefulness = _get_usefulness()
-        pickle.dump(usefulness, open('test1data/usefulness_raw.pickle', 'wb'))
+        pickle.dump(usefulness, open('test2data/usefulness_raw.pickle', 'wb'))
 
-    if (os.path.isfile('test1data/problemslemmas_raw.pickle')):
-        problemlemmas = pickle.load(open('test1data/problemslemmas_raw.pickle', 'rb'))
+    if (os.path.isfile('test2data/problemslemmas_raw.pickle')):
+        problemlemmas = pickle.load(open('test2data/problemslemmas_raw.pickle', 'rb'))
     else:
         problemlemmas = _get_problemslemmas()
-        pickle.dump(problemlemmas, open('test1data/problemslemmas_raw.pickle', 'wb'))
+        pickle.dump(problemlemmas, open('test2data/problemslemmas_raw.pickle', 'wb'))
 
     return usefulness, problemlemmas
 
