@@ -5,10 +5,11 @@ import sys
 import time
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 from cuda_check import device
 from parse import *
-from rnn import RNN
+from lstm import LSTM
 from util import *
 
 usefulness, problemlemmas = get_usefulness_problemslemmas()
@@ -19,36 +20,36 @@ n_letters = len(all_letters)
 output_size = 1
 n_hidden = 128
 
-rnn = RNN(n_letters, n_hidden, output_size)
-rnn.to(device)
+lstm = LSTM(n_letters, n_hidden, output_size)
+lstm.to(device)
 
 # The loss function is mean squared, this is different from the tutorial
 criterion = nn.MSELoss()
 learning_rate = 0.005
+optimizer = optim.SGD(lstm.parameters(), lr=learning_rate)
 
 def train(usefulness_tensor, line_tensor):
-    hidden = rnn.initHidden()
     output = None
 
-    rnn.zero_grad()
+    lstm.zero_grad()
 
-    for i in range(line_tensor.size()[0]):
-        output, hidden = rnn(line_tensor[i], hidden)
-
+    # am unsure if we are even passing in the right dims
+    output = lstm(line_tensor)
+    output = output[output.size()[0]-1]
+    
     loss = criterion(output, usefulness_tensor)
     loss.backward()
-
-    for p in rnn.parameters():
-        p.data.add_(-learning_rate, p.grad.data)
-
+    optimizer.step()
+    
     return output, loss.item()
 
-n_iters = 10
-print_every = 10
+n_iters = 1000
+print_every = 20
 plot_every = 10
 
 # Keep track of losses for plotting
 current_loss = 0
+total_loss = 0
 all_losses = []
 
 def timeSince(since):
@@ -66,11 +67,13 @@ for iter in range(1, n_iters + 1):
     )
     output, loss = train(usefulness_tensor, line_tensor)
     current_loss += loss
+    total_loss += loss
 
     # Print iter number, loss, name and guess
     if iter % print_every == 0:
         print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters * 100, timeSince(start)))
         print('Loss: %.4f \tTarget: %s \tOutput: %s' % (loss, usefulness_tensor.data[0][0], output.data[0][0]))
+        print('Average Loss: %.4f' % (total_loss / iter))
 
     # Add current loss avg to list of losses
     if iter % plot_every == 0:
@@ -81,10 +84,10 @@ for iter in range(1, n_iters + 1):
     sys.stdout.write('#')
     sys.stdout.flush()
 
-filename = './test1models/traning.pt'
+filename = './test2models/traning.pt'
 if not os.path.exists(os.path.dirname(filename)):
     os.makedirs(os.path.dirname(filename))
 
-torch.save(rnn.state_dict(), filename)
+torch.save(lstm.state_dict(), filename)
 
 print(all_losses)
