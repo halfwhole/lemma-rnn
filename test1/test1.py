@@ -1,14 +1,15 @@
 import math
+import os
 import string
 import sys
 import time
 import torch
 import torch.nn as nn
 
+from cuda_check import device
 from parse import *
 from rnn import RNN
 from util import *
-from cuda_check import device
 
 usefulness, problemlemmas = get_usefulness_problemslemmas()
 all_letters = string.printable
@@ -80,6 +81,10 @@ for iter in range(1, n_iters + 1):
     sys.stdout.write('#')
     sys.stdout.flush()
 
-torch.save(rnn.state_dict(), './test1models/training.pt')
+filename = './test1models/traning.pt'
+if not os.path.exists(os.path.dirname(filename)):
+    os.makedirs(os.path.dirname(filename))
+
+torch.save(rnn.state_dict(), filename)
 
 print(all_losses)

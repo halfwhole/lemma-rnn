@@ -3,10 +3,10 @@ import sys
 import torch
 import torch.nn as nn
 
+from cuda_check import device
 from parse import *
 from rnn import RNN
 from util import *
-from cuda_check import device
 
 usefulness, problemlemmas = get_usefulness_problemslemmas()
 all_letters = string.printable
