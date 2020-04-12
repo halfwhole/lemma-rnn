@@ -4,24 +4,28 @@ import functools
 import os
 import pickle
 
+filename_usefulness = 'test1data/usefulness_raw.pickle'
+filename_problemslemmas = 'test1data/problemslemmas_raw.pickle'
+
 def get_usefulness_problemslemmas():
-    if (os.path.isfile('test1data/usefulness_raw.pickle')):
-        usefulness = pickle.load(open('test1data/usefulness_raw.pickle', 'rb'))
+    if (os.path.isfile(filename_usefulness)):
+        usefulness = pickle.load(open(filename_usefulness, 'rb'))
     else:
         usefulness = _get_usefulness()
-        pickle.dump(usefulness, open('test1data/usefulness_raw.pickle', 'wb'))
+        os.makedirs(os.path.dirname(filename_usefulness))
+        pickle.dump(usefulness, open(filename_usefulness, 'wb'))
 
-    if (os.path.isfile('test1data/problemslemmas_raw.pickle')):
-        problemlemmas = pickle.load(open('test1data/problemslemmas_raw.pickle', 'rb'))
+    if (os.path.isfile(filename_problemslemmas)):
+        problemslemmas = pickle.load(open(filename_problemslemmas, 'rb'))
     else:
-        problemlemmas = _get_problemslemmas()
-        pickle.dump(problemlemmas, open('test1data/problemslemmas_raw.pickle', 'wb'))
+        problemslemmas = _get_problemslemmas()
+        pickle.dump(problemslemmas, open(filename_problemslemmas, 'wb'))
 
-    return usefulness, problemlemmas
+    return usefulness, problemslemmas
 
 @functools.lru_cache(maxsize=1)
 def parse_problem(problemname):
-    return _parse_cnf_file('E_conj/problems/{}'.format(problemname))
+    return _parse_cnf_file('../E_conj/problems/{}'.format(problemname))
 
 
 # all private methods from here on =================================================================
@@ -38,7 +42,7 @@ def _parse_cnf_file(filename):
 
 def _get_usefulness():
     print('getting usefulness')
-    with open('E_conj/statistics', 'r') as f:
+    with open('../E_conj/statistics', 'r') as f:
         s = f.read()
         ls = s.split('\n')
         usefulness = collections.defaultdict(dict)
@@ -64,8 +68,23 @@ def _process_problemslemmas(l):
 
 def _get_problemslemmas():
     print('parsing problems and lemmas')
+    with open('../E_conj/lemmas', 'r') as f:
+        s = f.read()
+        ls = s.split('\n')
+        problemslemmas = list()
+        for i in range(0, len(ls) - 1):
+            processed_problemlemma = _process_problemslemmas(ls[i])
+            problemslemmas.append(processed_problemlemma)
+        
+    return problemslemmas
+    
+# Code below ran into trouble on windows - infinite loops of threads called
+'''
+def _get_problemslemmas():
+    print('parsing problems and lemmas')
     import multiprocessing
 
     with multiprocessing.Pool() as pool:
         with open('E_conj/lemmas') as f:
             return pool.map(_process_problemslemmas, f, 32)
+'''

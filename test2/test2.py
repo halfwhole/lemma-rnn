@@ -43,8 +43,8 @@ def train(usefulness_tensor, line_tensor):
     
     return output, loss.item()
 
-n_iters = 1000
-print_every = 20
+n_iters = 10 # was 1000, made it 10 for now to stay consistent with numbers in test1.py
+print_every = 10 # was 20, made it 10 for now to stay consistent with numbers in test1.py
 plot_every = 10
 
 # Keep track of losses for plotting
@@ -84,7 +84,7 @@ for iter in range(1, n_iters + 1):
     sys.stdout.write('#')
     sys.stdout.flush()
 
-filename = './test2models/traning.pt'
+filename = './test2models/training.pt'
 if not os.path.exists(os.path.dirname(filename)):
     os.makedirs(os.path.dirname(filename))
 

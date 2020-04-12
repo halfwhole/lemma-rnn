@@ -81,7 +81,7 @@ for iter in range(1, n_iters + 1):
     sys.stdout.write('#')
     sys.stdout.flush()
 
-filename = './test1models/traning.pt'
+filename = './test1models/training.pt'
 if not os.path.exists(os.path.dirname(filename)):
     os.makedirs(os.path.dirname(filename))
 
