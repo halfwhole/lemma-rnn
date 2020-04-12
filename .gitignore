@@ -135,6 +135,7 @@ tags
 ex1data
 ex2data
 ex3data
+test1data
 test2data
 test3data
 lemmadata
@@ -143,3 +144,4 @@ oldruns
 
 # models
 test1models
+test2models

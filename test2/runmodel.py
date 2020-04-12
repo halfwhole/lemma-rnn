@@ -17,7 +17,7 @@ output_size = 1
 n_hidden = 128
 
 model = RNN(n_letters, n_hidden, output_size)
-state_dict = torch.load('./test1models/training.pt')
+state_dict = torch.load('./test2models/training.pt')
 model.load_state_dict(state_dict)
 model.to(device)
 
