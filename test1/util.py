@@ -28,3 +28,14 @@ def randomTrainingExample(problemlemmas, usefulness, all_letters, cuda):
     usefulness_tensor = torch.tensor([[pl_usefulness]], dtype=torch.float).to(cuda)
     line_tensor = lineToTensor(pl_probcatlemma, all_letters, cuda)
     return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor
+
+def getTrainingExample(pl, usefulness, all_letters, cuda):
+    pl_probname = pl[0]
+    pl_lemmaname = pl[1]
+    # Concatenate the problem with lemma, seperated by unused '@'
+    pl_probcatlemma = pl[2] + '@' + pl[3]
+    pl_usefulness = usefulness[pl_probname][pl_lemmaname]
+
+    usefulness_tensor = torch.tensor([[pl_usefulness]], dtype=torch.float).to(cuda)
+    line_tensor = lineToTensor(pl_probcatlemma, all_letters, cuda)
+    return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor

@@ -5,13 +5,17 @@ import sys
 import time
 import torch
 import torch.nn as nn
+import random
+random.seed(time.time())
 
 from cuda_check import device
 from parse import *
 from rnn import RNN
 from util import *
 
-usefulness, problemlemmas = get_usefulness_problemslemmas()
+usefulness, problemlemmas_test, problemslemmas_validation = get_data()
+random.shuffle(problemlemmas_test)
+
 all_letters = string.printable
 n_letters = len(all_letters)
 
@@ -61,8 +65,8 @@ def timeSince(since):
 start = time.time()
 
 for iter in range(1, n_iters + 1):
-    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = randomTrainingExample(
-        problemlemmas, usefulness, all_letters, device
+    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = getTrainingExample(
+        problemlemmas_test[iter], usefulness, all_letters, device
     )
     output, loss = train(usefulness_tensor, line_tensor)
     current_loss += loss

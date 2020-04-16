@@ -4,10 +4,15 @@ import functools
 import os
 import pickle
 
-filename_usefulness = 'test1data/usefulness_raw.pickle'
-filename_problemslemmas = 'test1data/problemslemmas_raw.pickle'
+import time
+import random
+random.seed(time.time())
 
-def get_usefulness_problemslemmas():
+filename_usefulness = 'test1data/usefulness_raw.pickle'
+filename_problemslemmas_test = 'test1data/problemslemmas_test_raw.pickle'
+filename_problemslemmas_validation = 'test1data/problemslemmas_validation_raw.pickle'
+
+def get_data():
     if (os.path.isfile(filename_usefulness)):
         usefulness = pickle.load(open(filename_usefulness, 'rb'))
     else:
@@ -15,13 +20,15 @@ def get_usefulness_problemslemmas():
         os.makedirs(os.path.dirname(filename_usefulness))
         pickle.dump(usefulness, open(filename_usefulness, 'wb'))
 
-    if (os.path.isfile(filename_problemslemmas)):
-        problemslemmas = pickle.load(open(filename_problemslemmas, 'rb'))
+    if (os.path.isfile(filename_problemslemmas_test) and os.path.isfile(filename_problemslemmas_validation)):
+        problemslemmas_test = pickle.load(open(filename_problemslemmas_test, 'rb'))
+        problemslemmas_validation = pickle.load(open(filename_problemslemmas_validation, 'rb'))
     else:
-        problemslemmas = _get_problemslemmas()
-        pickle.dump(problemslemmas, open(filename_problemslemmas, 'wb'))
+        problemslemmas_test, problemslemmas_validation = _get_problemslemmas()
+        pickle.dump(problemslemmas_test, open(filename_problemslemmas_test, 'wb'))
+        pickle.dump(problemslemmas_validation, open(filename_problemslemmas_validation, 'wb'))
 
-    return usefulness, problemslemmas
+    return usefulness, problemslemmas_test, problemslemmas_validation
 
 @functools.lru_cache(maxsize=1)
 def parse_problem(problemname):
@@ -42,11 +49,13 @@ def _parse_cnf_file(filename):
 
 def _get_usefulness():
     print('getting usefulness')
+    linecount = 0
     with open('../E_conj/statistics', 'r') as f:
         s = f.read()
         ls = s.split('\n')
         usefulness = collections.defaultdict(dict)
         for l in ls:
+            linecount = linecount + 1
             if not l.strip():
                 continue
             psr, problem, lemmaname, *_ = l.split(':')
@@ -54,6 +63,7 @@ def _get_usefulness():
             lemmaname = lemmaname.split('.')[0]
             usefulness[problem][lemmaname] = psr
 
+    print('statistics lines parsed: ', linecount)
     return usefulness
 
 def _process_problemslemmas(l):
@@ -71,12 +81,18 @@ def _get_problemslemmas():
     with open('../E_conj/lemmas', 'r') as f:
         s = f.read()
         ls = s.split('\n')
-        problemslemmas = list()
+        problemslemmas_test = list()
+        problemslemmas_validation = list()
         for i in range(0, len(ls) - 1):
             processed_problemlemma = _process_problemslemmas(ls[i])
-            problemslemmas.append(processed_problemlemma)
-        
-    return problemslemmas
+            if (random.random() <= 0.8):
+                problemslemmas_test.append(processed_problemlemma)
+            else:
+                problemslemmas_validation.append(processed_problemlemma)
+
+    print('problemlemma test lines parsed: ', len(problemslemmas_test))
+    print('problemlemma validation lines parsed: ', len(problemslemmas_validation))
+    return problemslemmas_test, problemslemmas_validation
     
 # Code below ran into trouble on windows - infinite loops of threads called
 '''
