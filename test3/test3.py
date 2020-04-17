@@ -21,11 +21,12 @@ all_letters = string.printable
 n_letters = len(all_letters)
 
 # Output is float, sigmoid function output
+input_size = n_letters * 2
 output_size = 1
 n_hidden1 = 128
 n_hidden2 = 32
 
-lstm = LSTM(n_letters, n_hidden1, n_hidden2, output_size)
+lstm = LSTM(input_size, n_hidden1, n_hidden2, output_size)
 lstm.to(device)
 
 # The loss function is binary cross entropy
@@ -38,7 +39,6 @@ def train(usefulness_tensor, line_tensor):
 
     lstm.zero_grad()
 
-    # am unsure if we are even passing in the right dims
     output = lstm(line_tensor)
     output = output[output.size()[0]-1]
 
@@ -109,6 +109,7 @@ for iter in range(1, n_iters + 1):
         all_losses.append(current_loss / plot_every)
         current_loss = 0
     
+    # Validate on a small validation set (same set used throughout)
     if iter % validate_every == 0:
         print('Validation: %d/%d (%d%%)' % _perform_midway_validation(lstm, problemslemmas_validation, n_validate))
 

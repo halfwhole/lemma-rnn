@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from cuda_check import device  
 
+# stacked lstm with 2 hidden layers that can be of diff sizes
 class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
         super(LSTM, self).__init__()

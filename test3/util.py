@@ -43,12 +43,23 @@ def randomTrainingExample(problemlemmas, usefulness, all_letters, cuda):
 def getTrainingExample(pl, usefulness, all_letters, cuda):
     pl_probname = pl[0]
     pl_lemmaname = pl[1]
-    # Concatenate the problem with lemma, seperated by unused '@'
-    pl_probcatlemma = pl[2] + '@' + pl[3]
     pl_usefulness = usefulness[pl_probname][pl_lemmaname]
     if (pl_usefulness < 1):
         usefulness_tensor = torch.tensor([[1]], dtype=torch.float).to(cuda)
     else:
         usefulness_tensor = torch.tensor([[0]], dtype=torch.float).to(cuda)
-    line_tensor = lineToTensor(pl_probcatlemma, all_letters, cuda)
+
+    # problems and lemmas are one-hot encoded. problems are encoded using the
+    # first 100 indices, while lemmas are encoded using the last 100.
+    # line_tensor is a concatenation of the problem w the lemma.
+
+    prob_tensor = lineToTensor(pl[2], all_letters, cuda)
+    zero_tensor = torch.zeros(prob_tensor.size()).to(cuda)
+    prob_tensor = torch.cat((prob_tensor, zero_tensor), 2)
+    
+    lemma_tensor = lineToTensor(pl[3], all_letters, cuda)
+    zero_tensor = torch.zeros(lemma_tensor.size()).to(cuda)
+    lemma_tensor = torch.cat((zero_tensor, lemma_tensor), 2)
+    
+    line_tensor = torch.cat((prob_tensor, lemma_tensor), 0)
     return pl_probname, pl_lemmaname, usefulness_tensor, line_tensor
