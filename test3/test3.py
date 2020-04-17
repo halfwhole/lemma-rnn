@@ -1,5 +1,6 @@
 import math
 import os
+import pdb
 import string
 import sys
 import time
@@ -16,7 +17,6 @@ from util import *
 
 usefulness, problemlemmas_test, problemslemmas_validation = get_data()
 random.shuffle(problemlemmas_test)
-
 all_letters = string.printable
 n_letters = len(all_letters)
 
@@ -51,6 +51,9 @@ n_iters = 1000 # was 1000, made it 10 for now to stay consistent with numbers in
 print_every = 10 # was 20, made it 10 for now to stay consistent with numbers in test1.py
 plot_every = 10
 
+n_validate = 25
+validate_every = 10
+
 # Keep track of losses for plotting
 current_loss = 0
 total_loss = 0
@@ -65,6 +68,27 @@ def timeSince(since):
 
 start = time.time()
 
+# use this to perform validations halfway through the training (to see how well it's learning)
+# not going to shuffle (think it makes more sense this way)
+def _perform_midway_validation(model, validation_set, n_validate):
+    
+    correct = 0
+
+    for i in range(n_validate):
+        _,_, usefulness_tensor, line_tensor = getTrainingExample(
+            validation_set[i], usefulness, all_letters, device
+        )
+
+        output = lstm(line_tensor)
+        output = output[output.size()[0]-1]
+        o = output[0][0].item()
+        t = usefulness_tensor[0][0].item()
+
+        if (abs(o-t) < 0.5):
+            correct += 1
+
+    return (correct, n_validate, correct*100/n_validate)
+
 for iter in range(1, n_iters + 1):
     pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = getTrainingExample(
         problemlemmas_test[iter], usefulness, all_letters, device
@@ -77,12 +101,15 @@ for iter in range(1, n_iters + 1):
     if iter % print_every == 0:
         print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters * 100, timeSince(start)))
         print('Loss: %.4f \tTarget: %s \tOutput: %s' % (loss, usefulness_tensor.data[0][0], output.data[0][0]))
-        print('Average Loss: %.4f' % (total_loss / iter))
+        print('Average Loss (total): %.4f' % (total_loss / iter))
 
     # Add current loss avg to list of losses
     if iter % plot_every == 0:
         all_losses.append(current_loss / plot_every)
         current_loss = 0
+    
+    if iter % validate_every == 0:
+        print('Validation: %d/%d (%d%%)' % _perform_midway_validation(lstm, problemslemmas_validation, n_validate))
 
     # Sanity check that everything is still running
     sys.stdout.write('#')
