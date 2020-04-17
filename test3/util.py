@@ -1,3 +1,4 @@
+import pdb
 import random
 import torch
 
@@ -22,6 +23,7 @@ def categoryIndexFromOutput(output):
 def _randomChoice(l):
     return l[random.randint(0, len(l) - 1)]
 
+# TODO refactor this to use the getTrainingExample method
 def randomTrainingExample(problemlemmas, usefulness, all_letters, cuda):
     pl = _randomChoice(problemlemmas)
     pl_probname = pl[0]

@@ -22,9 +22,10 @@ n_letters = len(all_letters)
 
 # Output is float, sigmoid function output
 output_size = 1
-n_hidden = 128
+n_hidden1 = 128
+n_hidden2 = 32
 
-lstm = LSTM(n_letters, n_hidden, output_size)
+lstm = LSTM(n_letters, n_hidden1, n_hidden2, output_size)
 lstm.to(device)
 
 # The loss function is binary cross entropy
@@ -52,7 +53,7 @@ print_every = 10 # was 20, made it 10 for now to stay consistent with numbers in
 plot_every = 10
 
 n_validate = 25
-validate_every = 10
+validate_every = 200
 
 # Keep track of losses for plotting
 current_loss = 0
