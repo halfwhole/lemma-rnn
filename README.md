@@ -12,3 +12,12 @@ To run rnn model:
 To run lstm model:  
 `cd test2`  
 `python test2.py`
+
+To run lstm model of two layers:  
+`cd test3`  
+`python test3.py`
+
+To run lstm model with AST:  
+`cd test4`  
+`pip install parsy`  
+`python test4.py`

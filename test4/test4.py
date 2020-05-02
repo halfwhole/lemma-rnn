@@ -46,8 +46,8 @@ def train(usefulness_tensor, line_tensor):
 
     return output, loss.item()
 
-n_iters = 1000 # was 1000, made it 10 for now to stay consistent with numbers in test1.py
-print_every = 10 # was 20, made it 10 for now to stay consistent with numbers in test1.py
+n_iters = len(problemlemmas_test)
+print_every = 10 
 plot_every = 10
 
 n_validate = 25
@@ -90,11 +90,15 @@ def _perform_midway_validation(model, validation_set, n_validate):
 
 for iter in range(1, n_iters + 1):
     pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = getTrainingExample(
-        problemlemmas_test[iter], usefulness, device
+        problemlemmas_test[iter - 1], usefulness, device
     )
     output, loss = train(usefulness_tensor, line_tensor)
     current_loss += loss
     total_loss += loss
+
+    # Sanity check that everything is still running
+    sys.stdout.write('#')
+    sys.stdout.flush()
 
     # Print iter number, loss, name and guess
     if iter % print_every == 0:
@@ -107,13 +111,9 @@ for iter in range(1, n_iters + 1):
         all_losses.append(current_loss / plot_every)
         current_loss = 0
     
-    # Validate on a small validation set (same set used throughout)
-    if iter % validate_every == 0:
-        print('Validation: %d/%d (%d%%)' % _perform_midway_validation(lstm, problemslemmas_validation, n_validate))
-
-    # Sanity check that everything is still running
-    sys.stdout.write('#')
-    sys.stdout.flush()
+    # Validate on a small validation set (same set used throughout) - Don't have midway validation now since final validation happens after training
+    # if iter % validate_every == 0:
+        # print('Validation: %d/%d (%d%%)' % _perform_midway_validation(lstm, problemslemmas_validation, n_validate))
 
 filename = './test4models/training.pt'
 if not os.path.exists(os.path.dirname(filename)):
@@ -121,4 +121,41 @@ if not os.path.exists(os.path.dirname(filename)):
 
 torch.save(lstm.state_dict(), filename)
 
+print('All Losses:')
 print(all_losses)
+
+#################################### Validation ####################################
+
+n_iters_validate = len(problemslemmas_validation)
+print_every_validate = 10
+print_every_correct = 0
+total_correct = 0
+
+start_validate = time.time()
+
+# Note: This is not midway-validation. This is validation after training on dataset.
+for iter in range(1, n_iters_validate + 1):
+    _,_, usefulness_tensor, line_tensor = getTrainingExample(
+    problemslemmas_validation[iter - 1], usefulness, device
+    )
+
+    output = lstm(line_tensor)
+    output = output[output.size()[0]-1]
+    o = output[0][0].item()
+    t = usefulness_tensor[0][0].item()
+
+    if (abs(o-t) < 0.5):
+        print_every_correct += 1
+        total_correct += 1
+
+    # Sanity check that everything is still running
+    sys.stdout.write('#')
+    sys.stdout.flush()
+
+    # Print iter number, and number correctly classified
+    if iter % print_every_validate == 0:
+        print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters_validate * 100, timeSince(start_validate)))
+        print('Validation: %d/%d (%d%%)' % (print_every_correct, print_every_validate, print_every_correct*100/print_every_validate))
+        print_every_correct = 0
+
+print('Final Validation Results: %d/%d (%d%%)' % (total_correct, n_iters_validate, total_correct*100/n_iters_validate))
