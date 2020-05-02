@@ -65,8 +65,6 @@ def timeSince(since):
     s -= m * 60
     return '%dm %ds' % (m, s)
 
-start = time.time()
-
 # use this to perform validations halfway through the training (to see how well it's learning)
 def test(model, validation_set, n_validate):
 
@@ -86,6 +84,8 @@ def test(model, validation_set, n_validate):
     return total_loss / n_validate
 
 def train(n_iters):
+
+    start = time.time()
 
     global all_losses, all_test_losses
     current_loss = 0
@@ -128,40 +128,49 @@ def train(n_iters):
 
 # lstm.load_state_dict(torch.load(filename))
 # lstm.eval()
-train(n_iters)
 
 #################################### Validation ####################################
 
-n_iters_validate = len(problemslemmas_validation)
+n_iters_validate = 1000
 print_every_validate = 10
 print_every_correct = 0
-total_correct = 0
 
-start_validate = time.time()
+def validate(n_iters_validate):
 
-# Note: This is not midway-validation. This is validation after training on dataset.
-for iter in range(1, n_iters_validate + 1):
-    _,_, usefulness_tensor, line_tensor = getTrainingExample(
-    problemslemmas_validation[iter - 1], usefulness, device
-    )
+    global print_every_validate, print_every_correct
+    total_correct = 0
+    total_loss = 0
+    start_validate = time.time()
 
-    output = lstm(line_tensor)
-    output = output[output.size()[0]-1]
-    o = output[0][0].item()
-    t = usefulness_tensor[0][0].item()
+    # Note: This is not midway-validation. This is validation after training on dataset.
+    for iter in range(1, n_iters_validate + 1):
+        _,_, usefulness_tensor, line_tensor = getTrainingExample(
+        problemslemmas_validation[iter - 1], usefulness, device
+        )
 
-    if (abs(o-t) < 0.5):
-        print_every_correct += 1
-        total_correct += 1
+        output = lstm(line_tensor)
+        output = output[output.size()[0]-1]
+        o = output[0][0].item()
+        t = usefulness_tensor[0][0].item()
+        loss = criterion(output, usefulness_tensor).item()
+        total_loss += loss
 
-    # Sanity check that everything is still running
-    sys.stdout.write('#')
-    sys.stdout.flush()
+        if (abs(o-t) < 0.5):
+            print_every_correct += 1
+            total_correct += 1
 
-    # Print iter number, and number correctly classified
-    if iter % print_every_validate == 0:
-        print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters_validate * 100, timeSince(start_validate)))
-        print('Validation: %d/%d (%d%%)' % (print_every_correct, print_every_validate, print_every_correct*100/print_every_validate))
-        print_every_correct = 0
+        # Sanity check that everything is still running
+        sys.stdout.write('#')
+        sys.stdout.flush()
 
-print('Final Validation Results: %d/%d (%d%%)' % (total_correct, n_iters_validate, total_correct*100/n_iters_validate))
+        # Print iter number, and number correctly classified
+        if iter % print_every_validate == 0:
+            print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters_validate * 100, timeSince(start_validate)))
+            print('Validation: %d/%d (%d%%)' % (print_every_correct, print_every_validate, print_every_correct*100/print_every_validate))
+            print_every_correct = 0
+
+    print('Final Validation Results: %d/%d (%d%%)' % (total_correct, n_iters_validate, total_correct*100/n_iters_validate))
+    print('Average Validation Loss: %.4f' % (total_loss / n_iters_validate))
+
+train(n_iters)
+validate(n_iters_validate)
