@@ -18,6 +18,8 @@ from util import *
 usefulness, problemlemmas_test, problemslemmas_validation = get_data()
 random.shuffle(problemlemmas_test)
 
+filename = './test4models/training.pt'
+
 # Output is float, sigmoid function output
 input_size = 2 * tensor_length
 output_size = 1
@@ -32,7 +34,7 @@ criterion = nn.BCELoss()
 learning_rate = 0.005
 optimizer = optim.SGD(lstm.parameters(), lr=learning_rate)
 
-def train(usefulness_tensor, line_tensor):
+def trainOne(usefulness_tensor, line_tensor):
     output = None
 
     lstm.zero_grad()
@@ -46,17 +48,15 @@ def train(usefulness_tensor, line_tensor):
 
     return output, loss.item()
 
-n_iters = len(problemlemmas_test)
-print_every = 10 
-plot_every = 10
+n_iters = 10000
+train_every = 10 # was 20, made it 10 for now to stay consistent with numbers in test1.py
 
-n_validate = 25
-validate_every = 200
+n_validate = 10
+validate_every = 10
 
 # Keep track of losses for plotting
-current_loss = 0
-total_loss = 0
 all_losses = []
+all_test_losses = []
 
 def timeSince(since):
     now = time.time()
@@ -68,10 +68,10 @@ def timeSince(since):
 start = time.time()
 
 # use this to perform validations halfway through the training (to see how well it's learning)
-# not going to shuffle (think it makes more sense this way)
-def _perform_midway_validation(model, validation_set, n_validate):
-    
-    correct = 0
+def test(model, validation_set, n_validate):
+
+    random.shuffle(validation_set)
+    total_loss = 0
 
     for i in range(n_validate):
         _,_, usefulness_tensor, line_tensor = getTrainingExample(
@@ -80,49 +80,55 @@ def _perform_midway_validation(model, validation_set, n_validate):
 
         output = lstm(line_tensor)
         output = output[output.size()[0]-1]
-        o = output[0][0].item()
-        t = usefulness_tensor[0][0].item()
+        loss = criterion(output, usefulness_tensor).item()
+        total_loss += loss
 
-        if (abs(o-t) < 0.5):
-            correct += 1
+    return total_loss / n_validate
 
-    return (correct, n_validate, correct*100/n_validate)
+def train(n_iters):
 
-for iter in range(1, n_iters + 1):
-    pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = getTrainingExample(
-        problemlemmas_test[iter - 1], usefulness, device
-    )
-    output, loss = train(usefulness_tensor, line_tensor)
-    current_loss += loss
-    total_loss += loss
+    global all_losses, all_test_losses
+    current_loss = 0
+    total_loss = 0
 
-    # Sanity check that everything is still running
-    sys.stdout.write('#')
-    sys.stdout.flush()
+    for iter in range(1, n_iters + 1):
+        pl_probname, pl_lemmaname, usefulness_tensor, line_tensor = getTrainingExample(
+            problemlemmas_test[iter], usefulness, device
+        )
+        output, loss = trainOne(usefulness_tensor, line_tensor)
+        current_loss += loss
 
-    # Print iter number, loss, name and guess
-    if iter % print_every == 0:
-        print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters * 100, timeSince(start)))
-        print('Loss: %.4f \tTarget: %s \tOutput: %s' % (loss, usefulness_tensor.data[0][0], output.data[0][0]))
-        print('Average Loss (total): %.4f' % (total_loss / iter))
+        # Print iter number, loss, name and guess
+        # Add current loss avg to list of losses
+        if iter % train_every == 0:
+            print('\nIteration: %d \tProgress: %d%% \t(%s)' % (iter, iter / n_iters * 100, timeSince(start)))
+            print('Loss: %.4f \tTarget: %s \tOutput: %s' % (loss, usefulness_tensor.data[0][0], output.data[0][0]))
+            print('Average Loss: %.4f' % (current_loss / train_every))
+            all_losses.append(current_loss / train_every)
+            current_loss = 0
 
-    # Add current loss avg to list of losses
-    if iter % plot_every == 0:
-        all_losses.append(current_loss / plot_every)
-        current_loss = 0
-    
-    # Validate on a small validation set (same set used throughout) - Don't have midway validation now since final validation happens after training
-    # if iter % validate_every == 0:
-        # print('Validation: %d/%d (%d%%)' % _perform_midway_validation(lstm, problemslemmas_validation, n_validate))
+        # Validate on a small validation set (same set used throughout)
+        if iter % validate_every == 0:
+            average_test_loss = test(lstm, problemslemmas_validation, n_validate)
+            print('Average Test Loss (over %d test examples): %.4f' % (n_validate, average_test_loss))
+            all_test_losses.append(average_test_loss)
 
-filename = './test4models/training.pt'
-if not os.path.exists(os.path.dirname(filename)):
-    os.makedirs(os.path.dirname(filename))
+        # Sanity check that everything is still running
+        sys.stdout.write('#')
+        sys.stdout.flush()
 
-torch.save(lstm.state_dict(), filename)
+    if not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
 
-print('All Losses:')
-print(all_losses)
+    torch.save(lstm.state_dict(), filename)
+    print('Saved model to %s!' % filename)
+
+    print('All Losses:')
+    print(all_losses)
+
+# lstm.load_state_dict(torch.load(filename))
+# lstm.eval()
+train(n_iters)
 
 #################################### Validation ####################################
 
