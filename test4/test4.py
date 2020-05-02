@@ -107,11 +107,11 @@ def train(n_iters):
             all_losses.append(current_loss / train_every)
             current_loss = 0
 
-        # Validate on a small validation set (same set used throughout)
-        if iter % validate_every == 0:
-            average_test_loss = test(lstm, problemslemmas_validation, n_validate)
-            print('Average Test Loss (over %d test examples): %.4f' % (n_validate, average_test_loss))
-            all_test_losses.append(average_test_loss)
+        # Validate on a small validation set
+        # if iter % validate_every == 0:
+        #     average_test_loss = test(lstm, problemslemmas_validation, n_validate)
+        #     print('Average Test Loss (over %d test examples): %.4f' % (n_validate, average_test_loss))
+        #     all_test_losses.append(average_test_loss)
 
         # Sanity check that everything is still running
         sys.stdout.write('#')
